@@ -1,9 +1,10 @@
 <script>
     export let char;
     export let keypress;
+    export let status = "";
 </script>
 
-<div class="key" on:click={keypress(char.toUpperCase())}>
+<div class={`key ${status}`} on:click={() => keypress(char.toUpperCase())}>
     {char.toUpperCase()}
 </div>
 
@@ -23,6 +24,18 @@
 
     .key:hover {
         background-color: var(--orange);
+    }
+
+    .key.correct {
+        background-color: var(--green);
+    }
+
+    .key.close {
+        background-color: var(--orange);
+    }
+
+    .key.incorrect {
+        background-color: var(--dark);
     }
 
     /* desktop */

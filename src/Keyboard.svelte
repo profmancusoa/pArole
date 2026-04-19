@@ -1,10 +1,61 @@
 <script>
     import Key from "./Key.svelte";
-    import { board, gameInfo, colors, GAME_WORD, guess, gameOver } from "./store";
+    import { board, gameInfo, colors, keyboardColors, GAME_WORD, guess, gameOver } from "./store";
 
     const row1 = ['q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p'];
     const row2 = ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l'];
     const row3 = ['DEL', 'z', 'x', 'c', 'v', 'b', 'n', 'm', 'ENTER']; 
+
+    const statusPriority = {
+        incorrect: 0,
+        close: 1,
+        correct: 2
+    };
+
+    function setKeyboardKeyStatus(char, status) {
+        keyboardColors.update((prevColors) => {
+            const currentStatus = prevColors[char];
+
+            if (
+                currentStatus &&
+                statusPriority[currentStatus] >= statusPriority[status]
+            ) {
+                return prevColors;
+            }
+
+            return {
+                ...prevColors,
+                [char]: status
+            };
+        });
+    }
+
+    function evaluateGuess(guessWord, gameWord) {
+        const result = Array(5).fill("incorrect");
+        const remainingChars = {};
+
+        for (let i = 0; i < 5; i++) {
+            if (guessWord[i] === gameWord[i]) {
+                result[i] = "correct";
+            } else {
+                remainingChars[gameWord[i]] = (remainingChars[gameWord[i]] || 0) + 1;
+            }
+        }
+
+        for (let i = 0; i < 5; i++) {
+            const char = guessWord[i];
+
+            if (result[i] === "correct")
+                continue;
+
+            if (remainingChars[char] > 0) {
+                result[i] = "close";
+                remainingChars[char]--;
+            }
+        }
+
+        return result;
+    }
 
 
     function handleDelete() {
@@ -29,38 +80,32 @@
 
         if(char != 5)
             return;
+
+        const prevAttempt = attempt;
+        const guessWord = $board[prevAttempt].join('').toUpperCase();
+        const gameWord = $GAME_WORD.toUpperCase();
+        const evaluatedColors = evaluateGuess(guessWord, gameWord);
         
         gameInfo.set({
             attempt:    attempt + 1,
             char: 0
         });
 
-        const prevAttempt = $gameInfo.attempt - 1;
         const newColorsBoard = $colors;
 
-        const duplicateChars = new Set();
-
         for(let i = 0; i < 5; i++) {
-            let char = $board[prevAttempt][i].toUpperCase();
-            guess.update((prevChars) => prevChars + char);
+            const currentChar = guessWord[i];
+            const status = evaluatedColors[i];
 
-            if($GAME_WORD[i].toUpperCase() === char)
-                newColorsBoard[prevAttempt][i] = "correct";
-            else if ($GAME_WORD.toUpperCase().includes(char)) {
-                if(!duplicateChars.has(char)) {
-                    newColorsBoard[prevAttempt][i] = "close";
-                    duplicateChars.add(char);
-               }
-            } else
-                newColorsBoard[prevAttempt][i] = "incorrect";
+            newColorsBoard[prevAttempt][i] = status;
+            setKeyboardKeyStatus(currentChar, status);
         }
 
         colors.set(newColorsBoard);
+        guess.set(guessWord);
 
-        if($guess == $GAME_WORD.toUpperCase() || prevAttempt == 5)
+        if(guessWord == gameWord || prevAttempt == 5)
             gameOver.set(true);
-        else
-            guess.set("");
     }
 
     function keypress(key) {
@@ -84,24 +129,44 @@
             gameInfo.set({attempt, char});
         }
     }
+
+    function handleKeyboardInput(event) {
+        const key = event.key.toUpperCase();
+
+        if (key === "ENTER") {
+            keypress("ENTER");
+            return;
+        }
+
+        if (key === "BACKSPACE" || key === "DELETE") {
+            event.preventDefault();
+            keypress("DEL");
+            return;
+        }
+
+        if (/^[A-Z]$/.test(key))
+            keypress(key);
+    }
 </script>
+
+<svelte:window on:keydown={handleKeyboardInput} />
 
 <div class="keybaord">
     <div class="row">
         {#each row1 as char}
-             <Key {char} {keypress} />
+             <Key {char} {keypress} status={$keyboardColors[char.toUpperCase()]}/>
         {/each}
     </div>
 
     <div class="row">
         {#each row2 as char}
-             <Key {char} {keypress} />
+             <Key {char} {keypress} status={$keyboardColors[char.toUpperCase()]}/>
         {/each}
     </div>
 
     <div class="row">
         {#each row3 as char}
-             <Key {char} {keypress} />
+             <Key {char} {keypress} status={$keyboardColors[char.toUpperCase()]}/>
         {/each}
     </div>
 </div>

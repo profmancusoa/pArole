@@ -1,18 +1,16 @@
 <script>
-    import { board, gameInfo, GAME_WORD, guess, colors, createGrid, gameOver } from './store';
+    import { board, gameInfo, GAME_WORD, guess, colors, keyboardColors, createGrid, getRandomWord, gameOver } from './store';
     import Board from './Board.svelte';
 
     function playAgain() {
-        const wordlist = ['GAGNI', 'GAGNO', 'GALEA', 'GALEE', 'GALEI', 'GALEO', 'GALLA', 'GALLE', 'GALLI', 'GALLO', 'GALOP', 'GAMBA'];
-        const word = wordlist[Math.floor(Math.random() * wordlist.length)];
-     
-        GAME_WORD.set(word);
+        GAME_WORD.set(getRandomWord());
         gameInfo.set({
             attempt: 0,
             char: 0
         });
         guess.set("");
         colors.set(createGrid());
+        keyboardColors.set({});
         board.set(createGrid());
         gameOver.set(false);
     }
